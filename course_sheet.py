@@ -20,26 +20,37 @@ from oauth2client.file import Storage
 import course_gitlab
 
 
+SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+CLIENT_SECRET_FILE = 'client_secret.json'
+APPLICATION_NAME = 'Test Conc Bot'
 SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
-ENV_CREDENTIALS = "TEST-CONC-TABLE"
 
 
 logger = logging.getLogger(__name__)
 
 
-SHEET_RESULTS='Оценки'
-SHEET_REJUDGE='Rejudge'
-SHEET_LEADERBOARD='Leaderboard'
+def get_credentials():
+    home_dir = os.path.expanduser('~')
+    credential_dir = os.path.join(home_dir, '.credentials')
+    if not os.path.exists(credential_dir):
+        os.makedirs(credential_dir)
+    credential_path = os.path.join(credential_dir,
+                                   'sheets.googleapis.com-python-quickstart.json')
+
+    store = Storage(credential_path)
+    credentials = store.get()
+    if not credentials or credentials.invalid:
+        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
+        flow.user_agent = APPLICATION_NAME
+        credentials = tools.run_flow(flow, store)
+        print('Storing credentials to ' + credential_path)
+    return credentials
 
 
 class CourseSheet:
-    RANGE_SUBMIT_LOG = "Лог Посылок"
     RANGE_REPO_FORM = "'Заявки на Репозиторий'!A:D"
     RANGE_UPDATE_FORM = "'Заявки на Репозиторий'!D{}"
-    RANGE_TASK_HEADER = "'{sheet}'!2:2"
-    RANGE_STUDENTS = "'{sheet}'!A3:C1000"
-    RANGE_UPDATE_SCORE = "'{sheet}'!{x}{y}"
-
+    
     def __init__(self, service, spreadsheetId):
         self.service = service
         self.spreadsheetId = spreadsheetId
@@ -60,23 +71,6 @@ class CourseSheet:
             valueInputOption="USER_ENTERED",
             body={"values": [[status]]}).execute()
 
-    def add_student(self, name, login, repo_url):
-        if len(name) == 0 or re.match("\W", name[0], flags=re.UNICODE):
-            raise ValueError("Name looks fishy")
-
-        if len(login) == 0 or re.match("\W", login[0], flags=re.UNICODE):
-            raise ValueError("Login looks fishy")
-
-        self.service.spreadsheets().values().append(
-            spreadsheetId=self.spreadsheetId,
-            range=CourseSheet.RANGE_STUDENTS.format(sheet=SHEET_RESULTS),
-            valueInputOption="USER_ENTERED",
-            body={"values": [[
-                '=HYPERLINK("{}";"git")'.format(repo_url),
-                name,
-                login, # Spreadsheet injection, Oh My!
-            ]]}).execute()
-    
 
 def configure_argparser():
     parser = argparse.ArgumentParser(parents=[tools.argparser])
@@ -90,15 +84,16 @@ def configure_argparser():
 def create_repos(sheet):
     gitlab = course_gitlab.get_gitlab()
     requests = sheet.get_repo_requests()
+    print(requests)
     for i, req in enumerate(requests):
+        print(req, len(req))
         if len(req) > 3:
             continue
-
         name = req[1]
         login = req[2]
+        print(login, name)
         try:
             course_gitlab.create_project(gitlab, login)
-            sheet.add_student(name, login, "https://gitlab.com/test-conc/student-" + login)
             sheet.set_repo_status(i, "OK")
         except Exception:
             logger.exception("Can't create project")
@@ -107,9 +102,7 @@ def create_repos(sheet):
 
 
 def get_sheet_from_env():
-    if ENV_CREDENTIALS not in os.environ:
-        raise ValueError(ENV_CREDENTIALS + " not set")
-    credentials = client.Credentials.new_from_json(os.environ[ENV_CREDENTIALS])
+    credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
 
     discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
