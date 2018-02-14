@@ -31,7 +31,7 @@ def get_gitlab():
     return gl
 
 
-def create_project(gl, username, repo):
+def create_project(gl, username, name, team):
     users = gl.users.list(username=username)
     if len(users) == 0:
         raise ValueError("No user with username " + username)
@@ -43,7 +43,7 @@ def create_project(gl, username, repo):
         if group.name == GITLAB_GROUP:
             course_group = group
 
-    student_project_name = "student-" + student.username + "-" + repo
+    student_project_name = team + '-' + name
     student_project = None
     logger.info("Looking for project {}".format(student_project_name))
     for project in course_group.projects.list(search=student_project_name):

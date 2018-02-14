@@ -26,9 +26,6 @@ APPLICATION_NAME = 'Test Conc Bot'
 SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
 
 
-NUMBER_REPOS = 3
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -51,8 +48,8 @@ def get_credentials():
 
 
 class CourseSheet:
-    RANGE_REPO_FORM = "'Заявки на Репозиторий'!A:E"
-    RANGE_UPDATE_FORM = "'Заявки на Репозиторий'!E{}"
+    RANGE_REPO_FORM = "'Таблица логинов'!A:E"
+    RANGE_UPDATE_FORM = "'Таблица логинов'!E{}"
     
     def __init__(self, service, spreadsheetId):
         self.service = service
@@ -94,15 +91,15 @@ def create_repos(sheet):
         if len(req) > 4:
             continue
         
-        login = req[0]
+        team = req[1] 
+        login = req[2]
+        name = req[3].replace(' ', '-')
 
-        for j in range(NUMBER_REPOS):
-            repo = req[1+j]
-            try:
-                course_gitlab.create_project(gitlab, login, repo)
-                sheet.set_repo_status(i, "OK")
-            except Exception:
-                logger.exception("Can't create project")
+        try:
+            course_gitlab.create_project(gitlab, login, name, team)
+            sheet.set_repo_status(i, "OK")
+        except Exception:
+            logger.exception("Can't create project")
 
         time.sleep(1.0) # More time to press ^C
 
