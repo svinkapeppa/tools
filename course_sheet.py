@@ -86,11 +86,6 @@ def create_repos(sheet):
     requests = sheet.get_repo_requests()
     print(requests)
     for i, req in enumerate(requests):
-        print(req, len(req))
-
-        if len(req) > 4:
-            continue
-        
         team = req[1] 
         login = req[2]
         name = req[3].replace(' ', '-')
@@ -100,8 +95,6 @@ def create_repos(sheet):
             sheet.set_repo_status(i, "OK")
         except Exception:
             logger.exception("Can't create project")
-
-        time.sleep(1.0) # More time to press ^C
 
 
 def get_sheet_from_env():
