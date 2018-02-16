@@ -29,9 +29,9 @@ message = ['Create README.md', 'Create 1-mutex/README.md',
 
 # Здесь должны быть реальные логины семенаристов и ассистентов
 # 698 - чтобы не сбивался порядок
-teachers = [['lastperson'], ['692'], ['693'],
-            ['tiredperson'], ['695'], ['696'],
-            ['697'], ['698'], ['complicated']]
+teachers = [['691'], ['692'], ['693'],
+            ['complicated'], ['695'], ['696'],
+            ['697'], ['698'], ['699']]
 
 
 logger = logging.getLogger(__name__)
@@ -100,6 +100,9 @@ def create_project(gl, username, name, team):
                                       'commit_message': message[i]})
         time.sleep(0.5) # иначе файлы не успевают загрузиться
 
+    branch = student_project.branches.get('master')
+    branch.protect()
+
     for i in teachers[int(team)-691]:
         users = gl.users.list(username=i)
         if len(users) == 0:
@@ -115,7 +118,7 @@ def create_project(gl, username, name, team):
             logger.info("Adding user to project")
             student_project.members.create({
                 "user_id": admin.id,
-                "access_level": gitlab.DEVELOPER_ACCESS,
+                "access_level": gitlab.MASTER_ACCESS,
             })
 
     
