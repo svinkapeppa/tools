@@ -1,1 +1,0 @@
-# Задачи по теме "Fine grained locking"

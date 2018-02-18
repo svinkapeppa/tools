@@ -88,7 +88,7 @@ def create_repos(sheet):
     for i, req in enumerate(requests):
         team = req[1] 
         login = req[2]
-        name = req[3].replace(' ', '-')
+        name = '-'.join(req[3].split()).lower()
 
         try:
             course_gitlab.create_project(gitlab, login, name, team)

@@ -13,24 +13,20 @@ GITLAB_GROUP="test-conc"
 GITLAB_TOKEN_ENV="8k7sushNjNLT27sCcUW-"
 
 
-file = ['./tmp/0README.md', './tmp/1README.md', './tmp/2README.md',
-        './tmp/3README.md', './tmp/4README.md', './tmp/5README.md',
-        './tmp/6README.md', './tmp/7README.md', './tmp/8README.md']
+path = ['README.md', '1-mutex/.gitignore', '2-cond-var/.gitignore',
+        '3-fine-grained/.gitignore', '4-cache/.gitignore', '5-memory-model/.gitignore',
+        '6-lock-free/.gitignore', '7-linearizability/.gitignore', '8-consensus/.gitignore']
 
-path = ['README.md', '1-mutex/README.md', '2-cond-var/README.md',
-        '3-fine-grained/README.md', '4-cache/README.md', '5-memory-model/README.md',
-        '6-lock-free/README.md', '7-linearizability/README.md', '8-consensus/README.md']
-
-message = ['Create README.md', 'Create 1-mutex/README.md',
-           'Create 2-cond-var/README.md', 'Create 3-fine-grained/README.md',
-           'Create 4-cache/README.md', 'Create 5-memory-model/README.md',
-           'Create 6-lock-free/README.md', 'Create 7-linearizability/README.md',
-           'Create 8-consensus/README.md']
+message = ['Create README.md', 'Create 1-mutex/.gitignore',
+           'Create 2-cond-var/.gitignore', 'Create 3-fine-grained/.gitignore',
+           'Create 4-cache/.gitignore', 'Create 5-memory-model/.gitignore',
+           'Create 6-lock-free/.gitignore', 'Create 7-linearizability/.gitignore',
+           'Create 8-consensus/.gitignore']
 
 # Здесь должны быть реальные логины семенаристов и ассистентов
 # 698 - чтобы не сбивался порядок
 teachers = [['691'], ['692'], ['693'],
-            ['complicated'], ['695'], ['696'],
+            ['694'], ['Lipovsky'], ['696'],
             ['697'], ['698'], ['699']]
 
 
@@ -54,6 +50,9 @@ def get_gitlab():
 
 
 def create_project(gl, username, name, team):
+    if (int(team) < 691) and (int(team) > 699) and (int(team) != 698):
+        raise ValueError("Bad team " + team)
+
     users = gl.users.list(username=username)
     if len(users) == 0:
         raise ValueError("No user with username " + username)
@@ -92,13 +91,20 @@ def create_project(gl, username, name, team):
             "access_level": gitlab.DEVELOPER_ACCESS,
         })
 
-    for i in range(9):
-        content = open(file[i]).read()
+    # sleep - чтобы файлы успевали загружаться
+    content = open('./tmp/README.md').read()
+    student_project.files.create({'file_path': path[0],
+                                      'branch_name': 'master',
+                                      'content': content,
+                                      'commit_message': message[0]})
+    time.sleep(0.5)
+    for i in range(1, 9):
+        content = open('./tmp/.gitignore').read()
         student_project.files.create({'file_path': path[i],
                                       'branch_name': 'master',
                                       'content': content,
                                       'commit_message': message[i]})
-        time.sleep(0.5) # иначе файлы не успевают загрузиться
+        time.sleep(0.5)
 
     branch = student_project.branches.get('master')
     branch.protect()
