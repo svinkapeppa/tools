@@ -1,5 +1,5 @@
 _Пример того, как запускается скрипт_
-![](/images/usage_example.png)
+![](/images/usage.png)
 
 _Как выглядела таблица до применения скрипта_
 ![](/images/table_before.png)
