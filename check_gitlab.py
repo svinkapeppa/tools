@@ -1,17 +1,11 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse
 import gitlab
-import requests
-import sys
 import logging
-import pprint
-import time
 
-
-GITLAB_GROUP="test-conc"
-GITLAB_TOKEN_ENV="8k7sushNjNLT27sCcUW-"
-
+GITLAB_GROUP = "test-conc"
+GITLAB_TOKEN_ENV = "8k7sushNjNLT27sCcUW-"
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +30,10 @@ def check_user(gl, username):
     users = gl.users.list(username=username)
     if len(users) == 0:
         raise ValueError("No user with username " + username)
-    
-    
+
+
 if __name__ == "__main__":
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s',level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
     gl = get_gitlab()
 

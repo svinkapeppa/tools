@@ -1,17 +1,12 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse
 import gitlab
-import requests
-import sys
 import logging
-import pprint
 import time
 
-
-GITLAB_GROUP="test-conc"
-GITLAB_TOKEN_ENV="8k7sushNjNLT27sCcUW-"
-
+GITLAB_GROUP = "test-conc"
+GITLAB_TOKEN_ENV = "8k7sushNjNLT27sCcUW-"
 
 path = ['README.md', '1-mutex/.gitignore', '2-cond-var/.gitignore',
         '3-fine-grained/.gitignore', '4-cache/.gitignore', '5-memory-model/.gitignore',
@@ -28,7 +23,6 @@ message = ['Create README.md', 'Create 1-mutex/.gitignore',
 teachers = [['691'], ['692'], ['693'],
             ['694'], ['Lipovsky'], ['696'],
             ['697'], ['698'], ['699']]
-
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +88,9 @@ def create_project(gl, username, name, team):
     # sleep - чтобы файлы успевали загружаться
     content = open('./tmp/README.md').read()
     student_project.files.create({'file_path': path[0],
-                                      'branch_name': 'master',
-                                      'content': content,
-                                      'commit_message': message[0]})
+                                  'branch_name': 'master',
+                                  'content': content,
+                                  'commit_message': message[0]})
     time.sleep(0.5)
     for i in range(1, 9):
         content = open('./tmp/.gitignore').read()
@@ -109,7 +103,7 @@ def create_project(gl, username, name, team):
     branch = student_project.branches.get('master')
     branch.protect()
 
-    for i in teachers[int(team)-691]:
+    for i in teachers[int(team) - 691]:
         users = gl.users.list(username=i)
         if len(users) == 0:
             raise ValueError("No user with username " + i)
@@ -127,9 +121,9 @@ def create_project(gl, username, name, team):
                 "access_level": gitlab.MASTER_ACCESS,
             })
 
-    
+
 if __name__ == "__main__":
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s',level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
     gl = get_gitlab()
 

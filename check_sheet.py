@@ -1,31 +1,24 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 
 import httplib2
 import os
-import re
 import argparse
 import logging
 import time
-import pprint
-import datetime
-
 
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-
 import check_gitlab
 import course_gitlab
-
 
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Test Conc Bot'
 SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
-
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +44,7 @@ def get_credentials():
 class CourseSheet:
     RANGE_REPO_FORM = "'Таблица логинов'!A:C"
     RANGE_UPDATE_FORM = "'Таблица логинов'!C{}"
-    
+
     def __init__(self, service, spreadsheetId):
         self.service = service
         self.spreadsheetId = spreadsheetId
@@ -93,7 +86,7 @@ def check(sheet):
             check_gitlab.check_user(gitlab, login)
         except Exception:
             logger.exception("Invalid login")
-        
+
         flag = 1
         sleep_time = 10
         while flag == 1:
