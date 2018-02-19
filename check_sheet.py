@@ -91,9 +91,19 @@ def check(sheet):
 
         try:
             check_gitlab.check_user(gitlab, login)
-            sheet.set_repo_status(i, "OK")
         except Exception:
             logger.exception("Invalid login")
+        
+        flag = 1
+        sleep_time = 10
+        while flag == 1:
+            try:
+                sheet.set_repo_status(i, "OK")
+                flag = 0
+            except Exception:
+                time.sleep(sleep_time)
+                sleep_time *= 10
+                logger.exception("Timing problem")
 
 
 def get_sheet_from_env():
