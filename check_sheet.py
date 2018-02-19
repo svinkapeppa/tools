@@ -102,7 +102,7 @@ def check(sheet):
                 flag = 0
             except Exception:
                 time.sleep(sleep_time)
-                sleep_time *= 10
+                sleep_time = max(sleep_time * 10, 1000)
                 logger.exception("Timing problem")
 
 
