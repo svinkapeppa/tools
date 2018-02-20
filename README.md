@@ -1,7 +1,12 @@
-# tools
+# Tools
 
-## client_secret.json - штука для работы с Google Spreadsheet API
-## quickstart.py - тест для создания client_secret
-## course_gitlab.py - скрипт/библиотека для работы с отдлеьным человеком
-## course_sheet.py - главный скрипт
-## example.md - примеры в картинках с пояснениями
+Здесь собраны различные скрипты, которые взаимодействуют с Gitlab API и GoogleSpreadsheet API.
+
+Скрипты:
+* `client_secret.json` - необходимо для работы всех скриптов; можно получить на странцие GoogleSpreasheets API, при его создании
+* `quickstart.py` - скрипт, который позволяет проверить работу с GoogleSpreadsheets API
+* `course_gitlab.py` - скрипт, создающий репозиторий для конкретного человека
+* `course_sheet.py` - скрипт, создающий репозиторий для всех людей из таблицы
+* `GitlabLoginVerifier` - скрипт, который проверяет, что заданный логин зарегистрирован на gitlab.com
+* `GlobalVerifier` - скрипт, который проверяет, что все логины из таблицы зарегистрированы на gitlab.com
+* `example.md` - примеры работы
