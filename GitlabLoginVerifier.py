@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Manage student repositories on gitlab.com')
+    parser = argparse.ArgumentParser(description='Manage student\'s repositories on gitlab.com')
     subparsers = parser.add_subparsers(dest='cmd')
     subparsers.required = True
 
-    create = subparsers.add_parser("check_user", help="Check gitlab login")
-    create.add_argument("--username", type=str, help="gitlab.com username of student", required=True)
+    create = subparsers.add_parser("verify_login", help="Verify given gitlab login")
+    create.add_argument("--username", type=str, help="Login of the student", required=True)
 
     return parser.parse_args()
 
@@ -26,7 +26,7 @@ def get_gitlab():
     return gl
 
 
-def check_user(gl, username):
+def verify_login(gl, username):
     users = gl.users.list(username=username)
     if len(users) == 0:
         raise ValueError("No user with username " + username)
@@ -38,5 +38,5 @@ if __name__ == "__main__":
     gl = get_gitlab()
 
     args = parse_args()
-    if args.cmd == "check_user":
-        check_user(gl, args.username)
+    if args.cmd == "verify_login":
+        verify_login(gl, args.username)

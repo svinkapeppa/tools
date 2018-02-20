@@ -12,7 +12,7 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-import check_gitlab
+import GitlabLoginVerifier as glv
 import course_gitlab
 
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
@@ -71,31 +71,34 @@ def configure_argparser():
     subparsers = parser.add_subparsers(dest="cmd")
     subparsers.required = True
 
-    repos_parser = subparsers.add_parser("check", help="Check logins from google form")
+    repos_parser = subparsers.add_parser("verify", help="Verify data from google spreadsheet")
+
     return parser
 
 
-def check(sheet):
+def verify(sheet):
     gitlab = course_gitlab.get_gitlab()
     requests = sheet.get_repo_requests()
     print(requests)
     for i, req in enumerate(requests):
+        flag = 1
+        sleep_time = 10
+
         login = req[1]
 
         try:
-            check_gitlab.check_user(gitlab, login)
+            glv.verify_login(gitlab, login)
         except Exception:
+            flag = 0
             logger.exception("Invalid login")
 
-        flag = 1
-        sleep_time = 10
         while flag == 1:
             try:
                 sheet.set_repo_status(i, "OK")
                 flag = 0
             except Exception:
                 time.sleep(sleep_time)
-                sleep_time = max(sleep_time * 10, 1000)
+                sleep_time = max(sleep_time * 10, 100)
                 logger.exception("Timing problem")
 
 
@@ -122,8 +125,8 @@ def main():
 
     course = get_sheet_from_env()
 
-    if flags.cmd == "check":
-        check(course)
+    if flags.cmd == "verify":
+        verify(course)
 
 
 if __name__ == '__main__':
