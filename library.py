@@ -5,6 +5,7 @@ import logging
 import time
 
 import gitlab
+from retrying import retry
 
 import config as cfg
 
@@ -25,6 +26,7 @@ def parse_args():
     return parser.parse_args()
 
 
+@retry
 def verify_login(gl, username):
     users = gl.users.list(username=username)
     if len(users) == 0:
@@ -36,11 +38,13 @@ def verify_team(team):
         raise ValueError("Bad team " + team)
 
 
+@retry
 def get_gitlab():
     gl = gitlab.Gitlab("https://gitlab.com", cfg.GITLAB_TOKEN_ENV)
     return gl
 
 
+@retry
 def define_course_group(gl):
     course_group = None
     for group in gl.groups.list():
@@ -50,6 +54,7 @@ def define_course_group(gl):
     return course_group
 
 
+@retry
 def create_student_project(gl, course_group, team, name):
     student_project_name = team + '-' + name
     student_project = None
@@ -70,6 +75,7 @@ def create_student_project(gl, course_group, team, name):
     return student_project
 
 
+@retry
 def add_user(student_project, student, access):
     for member in student_project.members.list():
         if member.id == student.id:
@@ -83,6 +89,7 @@ def add_user(student_project, student, access):
         })
 
 
+@retry()
 def upload_files(student_project):
     content = open('./tmp/README.md').read()
     student_project.files.create({'file_path': 'README.md',

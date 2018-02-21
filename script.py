@@ -4,7 +4,6 @@
 import argparse
 import logging
 import os
-import random
 
 import httplib2
 from apiclient import discovery
@@ -49,6 +48,7 @@ class CourseSheet:
         self.service = service
         self.spreadsheetId = spreadsheetId
 
+    @retry
     def get_repo_requests(self):
         result = self.service.spreadsheets().values().get(
             spreadsheetId=self.spreadsheetId,
@@ -60,8 +60,6 @@ class CourseSheet:
 
     @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000)
     def set_repo_status(self, index, status):
-        if random.random() > 0.5:
-            raise ValueError("Special delivery")
         self.service.spreadsheets().values().update(
             spreadsheetId=self.spreadsheetId,
             range=CourseSheet.RANGE_UPDATE_FORM.format(index + 2),
@@ -96,8 +94,8 @@ def create_repos(sheet):
                 sheet.set_repo_status(i, "PROCESSING")
 
                 try:
-                    lib.create_project(gitlab, login, name, team)
                     sheet.set_repo_status(i, "OK")
+                    lib.create_project(gitlab, login, name, team)
                 except Exception:
                     logger.exception("Can't create project")
                     sheet.set_repo_status(i, "PROCESSING")
@@ -111,8 +109,8 @@ def create_repos(sheet):
                 sheet.set_repo_status(i, "PROCESSING")
 
                 try:
-                    lib.create_project(gitlab, login, name, team)
                     sheet.set_repo_status(i, "OK")
+                    lib.create_project(gitlab, login, name, team)
                 except Exception:
                     logger.exception("Can't create project")
                     sheet.set_repo_status(i, "PROCESSING")
