@@ -91,20 +91,68 @@ def create_repos(sheet):
             login = req[2]
             name = '-'.join(req[3].split()).lower()
 
-            try:
-                lib.create_project(gitlab, login, name, team)
-            except Exception:
-                flag = 0
-                logger.exception("Can't create project")
+            if len(req) == 4:
+                while flag == 1:
+                    try:
+                        sheet.set_repo_status(i, "PROCESSING")
+                        flag = 0
+                    except Exception:
+                        time.sleep(sleep_time)
+                        sleep_time = max(sleep_time * 10, 100)
+                        logger.exception("Timing problem")
 
-            while flag == 1:
+                flag = 1
+                sleep_time = 10
+
                 try:
-                    sheet.set_repo_status(i, "OK")
-                    flag = 0
+                    lib.create_project(gitlab, login, name, team)
                 except Exception:
-                    time.sleep(sleep_time)
-                    sleep_time = max(sleep_time * 10, 100)
-                    logger.exception("Timing problem")
+                    flag = 0
+                    logger.exception("Can't create project")
+
+                while flag == 1:
+                    try:
+                        sheet.set_repo_status(i, "OK")
+                        flag = 0
+                    except Exception:
+                        time.sleep(sleep_time)
+                        sleep_time = max(sleep_time * 10, 100)
+                        logger.exception("Timing problem")
+            elif (len(req) == 5) and (req[4] == 'PROCESSING'):
+                try:
+                    lib.delete_project(gitlab, name, team)
+                except Exception:
+                    logger.exception("Can't delete project")
+
+                flag = 1
+                sleep_time = 10
+
+                while flag == 1:
+                    try:
+                        sheet.set_repo_status(i, "PROCESSING")
+                        flag = 0
+                    except Exception:
+                        time.sleep(sleep_time)
+                        sleep_time = max(sleep_time * 10, 100)
+                        logger.exception("Timing problem")
+
+                flag = 1
+                sleep_time = 10
+
+                try:
+                    lib.create_project(gitlab, login, name, team)
+                except Exception:
+                    flag = 0
+                    logger.exception("Can't create project")
+
+                while flag == 1:
+                    try:
+                        sheet.set_repo_status(i, "OK")
+                        flag = 0
+                    except Exception:
+                        time.sleep(sleep_time)
+                        sleep_time = max(sleep_time * 10, 100)
+                        logger.exception("Timing problem")
 
 
 def verify_users(sheet):
@@ -115,7 +163,7 @@ def verify_users(sheet):
         flag = 1
         sleep_time = 10
 
-        login = req[1]
+        login = req[2]
 
         try:
             lib.verify_login(gitlab, login)
