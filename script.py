@@ -81,27 +81,30 @@ def create_repos(sheet):
     requests = sheet.get_repo_requests()
     print(requests)
     for i, req in enumerate(requests):
-        flag = 1
-        sleep_time = 10
+        if len(req) < 4:
+            logger.exception("Not all information is given")
+        else:
+            flag = 1
+            sleep_time = 10
 
-        team = req[1]
-        login = req[2]
-        name = '-'.join(req[3].split()).lower()
+            team = req[1]
+            login = req[2]
+            name = '-'.join(req[3].split()).lower()
 
-        try:
-            lib.create_project(gitlab, login, name, team)
-        except Exception:
-            flag = 0
-            logger.exception("Can't create project")
-
-        while flag == 1:
             try:
-                sheet.set_repo_status(i, "OK")
-                flag = 0
+                lib.create_project(gitlab, login, name, team)
             except Exception:
-                time.sleep(sleep_time)
-                sleep_time = max(sleep_time * 10, 100)
-                logger.exception("Timing problem")
+                flag = 0
+                logger.exception("Can't create project")
+
+            while flag == 1:
+                try:
+                    sheet.set_repo_status(i, "OK")
+                    flag = 0
+                except Exception:
+                    time.sleep(sleep_time)
+                    sleep_time = max(sleep_time * 10, 100)
+                    logger.exception("Timing problem")
 
 
 def verify_users(sheet):

@@ -48,13 +48,8 @@ def verify_login(gl, username):
         raise ValueError("No user with username " + username)
 
 
-def verify_name(name):
-    if len(name) == 0:
-        raise ValueError("Name not given")
-
-
 def verify_team(team):
-    if (int(team) < 691) and (int(team) > 699) and (int(team) != 698):
+    if (int(team) < 691) and (int(team) > 699) and (int(team) == 698):
         raise ValueError("Bad team " + team)
 
 
@@ -65,7 +60,7 @@ def get_gitlab():
 
 def define_course_group(gl):
     course_group = None
-    for group in gl.groups.search(GITLAB_GROUP):
+    for group in gl.groups.list():
         if group.name == GITLAB_GROUP:
             course_group = group
 
@@ -124,7 +119,6 @@ def upload_files(student_project):
 def create_project(gl, username, name, team):
     verify_login(gl, username)
     verify_team(team)
-    verify_name(name)
 
     users = gl.users.list(username=username)
     student = users[0]
@@ -153,10 +147,10 @@ def create_project(gl, username, name, team):
 if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
-    gl = get_gitlab()
+    git = get_gitlab()
 
     args = parse_args()
     if args.cmd == "create":
-        create_project(gl, args.username)
+        create_project(git, args.username)
     elif args.cmd == "verify":
-        verify_login(gl, args.username)
+        verify_login(git, args.username)
