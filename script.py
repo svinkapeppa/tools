@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
 
-import httplib2
-import os
 import argparse
 import logging
+import os
 import time
 
+import httplib2
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
-import GitlabLoginVerifier as glv
-import course_gitlab
+import library as lib
 
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
@@ -42,8 +41,8 @@ def get_credentials():
 
 
 class CourseSheet:
-    RANGE_REPO_FORM = "'Таблица логинов'!A:C"
-    RANGE_UPDATE_FORM = "'Таблица логинов'!C{}"
+    RANGE_REPO_FORM = "'Таблица логинов'!A:E"
+    RANGE_UPDATE_FORM = "'Таблица логинов'!E{}"
 
     def __init__(self, service, spreadsheetId):
         self.service = service
@@ -71,13 +70,42 @@ def configure_argparser():
     subparsers = parser.add_subparsers(dest="cmd")
     subparsers.required = True
 
-    repos_parser = subparsers.add_parser("verify", help="Verify data from google spreadsheet")
+    create = subparsers.add_parser("create_repos", help="Create repositories from google spreadsheet")
+    verify = subparsers.add_parser("verify_login", help="Verify data from google spreadsheet")
 
     return parser
 
 
-def verify(sheet):
-    gitlab = course_gitlab.get_gitlab()
+def create_repos(sheet):
+    gitlab = lib.get_gitlab()
+    requests = sheet.get_repo_requests()
+    print(requests)
+    for i, req in enumerate(requests):
+        flag = 1
+        sleep_time = 10
+
+        team = req[1]
+        login = req[2]
+        name = '-'.join(req[3].split()).lower()
+
+        try:
+            lib.create_project(gitlab, login, name, team)
+        except Exception:
+            flag = 0
+            logger.exception("Can't create project")
+
+        while flag == 1:
+            try:
+                sheet.set_repo_status(i, "OK")
+                flag = 0
+            except Exception:
+                time.sleep(sleep_time)
+                sleep_time = max(sleep_time * 10, 100)
+                logger.exception("Timing problem")
+
+
+def verify_users(sheet):
+    gitlab = lib.get_gitlab()
     requests = sheet.get_repo_requests()
     print(requests)
     for i, req in enumerate(requests):
@@ -87,7 +115,7 @@ def verify(sheet):
         login = req[1]
 
         try:
-            glv.verify_login(gitlab, login)
+            lib.verify_login(gitlab, login)
         except Exception:
             flag = 0
             logger.exception("Invalid login")
@@ -125,8 +153,10 @@ def main():
 
     course = get_sheet_from_env()
 
-    if flags.cmd == "verify":
-        verify(course)
+    if flags.cmd == "create_repos":
+        create_repos(course)
+    elif flags.cmd == "verify_login":
+        verify_users(course)
 
 
 if __name__ == '__main__':
