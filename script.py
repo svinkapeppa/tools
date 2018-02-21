@@ -4,13 +4,14 @@
 import argparse
 import logging
 import os
-import time
+import random
 
 import httplib2
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
+from retrying import retry
 
 import library as lib
 
@@ -57,7 +58,10 @@ class CourseSheet:
         values = result['values'][1:]
         return values
 
+    @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000)
     def set_repo_status(self, index, status):
+        if random.random() > 0.5:
+            raise ValueError("Special delivery")
         self.service.spreadsheets().values().update(
             spreadsheetId=self.spreadsheetId,
             range=CourseSheet.RANGE_UPDATE_FORM.format(index + 2),
@@ -84,75 +88,34 @@ def create_repos(sheet):
         if len(req) < 4:
             logger.exception("Not all information is given")
         else:
-            flag = 1
-            sleep_time = 10
-
             team = req[1]
             login = req[2]
             name = '-'.join(req[3].split()).lower()
 
             if len(req) == 4:
-                while flag == 1:
-                    try:
-                        sheet.set_repo_status(i, "PROCESSING")
-                        flag = 0
-                    except Exception:
-                        time.sleep(sleep_time)
-                        sleep_time = max(sleep_time * 10, 100)
-                        logger.exception("Timing problem")
-
-                flag = 1
-                sleep_time = 10
+                sheet.set_repo_status(i, "PROCESSING")
 
                 try:
                     lib.create_project(gitlab, login, name, team)
+                    sheet.set_repo_status(i, "OK")
                 except Exception:
-                    flag = 0
                     logger.exception("Can't create project")
+                    sheet.set_repo_status(i, "PROCESSING")
 
-                while flag == 1:
-                    try:
-                        sheet.set_repo_status(i, "OK")
-                        flag = 0
-                    except Exception:
-                        time.sleep(sleep_time)
-                        sleep_time = max(sleep_time * 10, 100)
-                        logger.exception("Timing problem")
             elif (len(req) == 5) and (req[4] == 'PROCESSING'):
                 try:
                     lib.delete_project(gitlab, name, team)
                 except Exception:
                     logger.exception("Can't delete project")
 
-                flag = 1
-                sleep_time = 10
-
-                while flag == 1:
-                    try:
-                        sheet.set_repo_status(i, "PROCESSING")
-                        flag = 0
-                    except Exception:
-                        time.sleep(sleep_time)
-                        sleep_time = max(sleep_time * 10, 100)
-                        logger.exception("Timing problem")
-
-                flag = 1
-                sleep_time = 10
+                sheet.set_repo_status(i, "PROCESSING")
 
                 try:
                     lib.create_project(gitlab, login, name, team)
+                    sheet.set_repo_status(i, "OK")
                 except Exception:
-                    flag = 0
                     logger.exception("Can't create project")
-
-                while flag == 1:
-                    try:
-                        sheet.set_repo_status(i, "OK")
-                        flag = 0
-                    except Exception:
-                        time.sleep(sleep_time)
-                        sleep_time = max(sleep_time * 10, 100)
-                        logger.exception("Timing problem")
+                    sheet.set_repo_status(i, "PROCESSING")
 
 
 def verify_users(sheet):
@@ -160,25 +123,14 @@ def verify_users(sheet):
     requests = sheet.get_repo_requests()
     print(requests)
     for i, req in enumerate(requests):
-        flag = 1
-        sleep_time = 10
-
         login = req[2]
 
         try:
             lib.verify_login(gitlab, login)
         except Exception:
-            flag = 0
             logger.exception("Invalid login")
 
-        while flag == 1:
-            try:
-                sheet.set_repo_status(i, "OK")
-                flag = 0
-            except Exception:
-                time.sleep(sleep_time)
-                sleep_time = max(sleep_time * 10, 100)
-                logger.exception("Timing problem")
+        sheet.set_repo_status(i, "OK")
 
 
 def get_sheet_from_env():
