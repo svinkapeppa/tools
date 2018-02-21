@@ -6,24 +6,7 @@ import time
 
 import gitlab
 
-GITLAB_GROUP = "test-conc"
-GITLAB_TOKEN_ENV = "8k7sushNjNLT27sCcUW-"
-
-path = ['README.md', '1-mutex/.gitignore', '2-cond-var/.gitignore',
-        '3-fine-grained/.gitignore', '4-cache/.gitignore', '5-memory-model/.gitignore',
-        '6-lock-free/.gitignore', '7-linearizability/.gitignore', '8-consensus/.gitignore']
-
-message = ['Create README.md', 'Create 1-mutex/.gitignore',
-           'Create 2-cond-var/.gitignore', 'Create 3-fine-grained/.gitignore',
-           'Create 4-cache/.gitignore', 'Create 5-memory-model/.gitignore',
-           'Create 6-lock-free/.gitignore', 'Create 7-linearizability/.gitignore',
-           'Create 8-consensus/.gitignore']
-
-# Здесь должны быть реальные логины семенаристов и ассистентов
-# 698 - чтобы не сбивался порядок
-teachers = [['svinkapeppa'], ['svinkapeppa'], ['svinkapeppa'],
-            ['svinkapeppa'], ['svinkapeppa'], ['svinkapeppa'],
-            ['svinkapeppa'], ['698'], ['svinkapeppa']]
+import config as cfg
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +37,14 @@ def verify_team(team):
 
 
 def get_gitlab():
-    gl = gitlab.Gitlab("https://gitlab.com", GITLAB_TOKEN_ENV)
+    gl = gitlab.Gitlab("https://gitlab.com", cfg.GITLAB_TOKEN_ENV)
     return gl
 
 
 def define_course_group(gl):
     course_group = None
     for group in gl.groups.list():
-        if group.name == GITLAB_GROUP:
+        if group.name == cfg.GITLAB_GROUP:
             course_group = group
 
     return course_group
@@ -102,17 +85,17 @@ def add_user(student_project, student, access):
 
 def upload_files(student_project):
     content = open('./tmp/README.md').read()
-    student_project.files.create({'file_path': path[0],
+    student_project.files.create({'file_path': 'README.md',
                                   'branch': 'master',
                                   'content': content,
-                                  'commit_message': message[0]})
+                                  'commit_message': 'Create README.md'})
     time.sleep(0.5)
-    for i in range(1, 9):
+    for file_info in cfg.file_info:
         content = open('./tmp/.gitignore').read()
-        student_project.files.create({'file_path': path[i],
+        student_project.files.create({'file_path': file_info[0],
                                       'branch': 'master',
                                       'content': content,
-                                      'commit_message': message[i]})
+                                      'commit_message': file_info[1]})
         time.sleep(0.5)
 
 
@@ -135,13 +118,10 @@ def create_project(gl, username, name, team):
     branch = student_project.branches.get('master')
     branch.protect()
 
-    for teacher in teachers[int(team) - 691]:
-        verify_login(gl, teacher)
-
-        users = gl.users.list(username=teacher)
-        admin = users[0]
-
-        add_user(student_project, admin, gitlab.MASTER_ACCESS)
+    teacher = cfg.teachers[team]
+    verify_login(gl, teacher)
+    admin = gl.users.list(username=teacher)[0]
+    add_user(student_project, admin, gitlab.MASTER_ACCESS)
 
 
 def delete_project(gl, name, team):
