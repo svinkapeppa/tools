@@ -6,6 +6,7 @@ import logging
 
 from oauth2client import tools
 
+import course_gitlab as cgl
 import course_sheet as csh
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,38 @@ def configure_argparser():
     return parser
 
 
+def create_repos(sheet):
+    gitlab = cgl.get_gitlab()
+    for row in sheet.get_requests():
+        if row.status == "PROCESSING":
+            try:
+                cgl.delete_project(gitlab, row.name, row.team)
+            except Exception:
+                logger.exception("Can't delete project")
+        if row.status != "OK":
+            try:
+                cgl.create_project(gitlab, row.login, row.name, row.team)
+                sheet.set_repo_status(row.row_index, "OK")
+            except Exception:
+                logger.exception("Can't create project")
+                sheet.set_repo_status(row.row_index, "PROCESSING")
+
+
+def verify_users(sheet):
+    gitlab = cgl.get_gitlab()
+    requests = sheet.get_repo_requests()
+    print(requests)
+    for i, req in enumerate(requests):
+        login = req[2]
+
+        try:
+            cgl.verify_login(gitlab, login)
+        except Exception:
+            logger.exception("Invalid login")
+
+        sheet.set_repo_status(i, "OK")
+
+
 def main():
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.ERROR)
     logger.setLevel(logging.INFO)
@@ -32,9 +65,9 @@ def main():
     course = csh.get_sheet_from_env()
 
     if flags.cmd == "create_repos":
-        csh.create_repos(course)
+        create_repos(course)
     elif flags.cmd == "verify_login":
-        csh.verify_users(course)
+        verify_users(course)
 
 
 if __name__ == '__main__':
