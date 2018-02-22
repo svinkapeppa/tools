@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import time
 
 import gitlab
 from retrying import retry
@@ -80,12 +81,14 @@ def upload_files(student_project):
                                   'branch': 'master',
                                   'content': content,
                                   'commit_message': 'Create README.md'})
+    time.sleep(0.5)
     for file_info in cfg.file_info:
         content = open('./tmp/.gitignore').read()
         student_project.files.create({'file_path': file_info[0],
                                       'branch': 'master',
                                       'content': content,
                                       'commit_message': file_info[1]})
+        time.sleep(0.5)
 
 
 def create_project(gl, username, name, team):

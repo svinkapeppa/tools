@@ -32,69 +32,72 @@ def get_credentials():
     return credentials
 
 
-class CourseSheet:
+class CourseSheet(object):
     RANGE_REPO_FORM = "'Таблица логинов'!A:E"
     RANGE_UPDATE_FORM = "'Таблица логинов'!E{}"
+
+    class Row(object):
+        def __init__(self, team, login, name, status, row_index):
+            self.team = team
+            self.login = login
+            self.name = name
+            self.status = status
+            self.row_index = row_index
 
     def __init__(self, service, spreadsheetId):
         self.service = service
         self.spreadsheetId = spreadsheetId
 
-    @retry
-    def get_repo_requests(self):
+    def read_sheet_rows(self):
         result = self.service.spreadsheets().values().get(
             spreadsheetId=self.spreadsheetId,
             range=CourseSheet.RANGE_REPO_FORM
         ).execute()
 
-        values = result['values'][1:]
-        return values
+        return result['values']
+
+    def get_requests(self):
+        rows = self.read_sheet_rows()
+
+        for row_index in range(1, len(rows)):
+            row = rows[row_index]
+
+            if len(row) < 4:
+                logger.warning("invalid {}-th row: {}".format(row_index, row))
+                continue
+
+            team = row[1]
+            login = row[2]
+            name = '-'.join(row[3].split()).lower()
+
+            status = row[4] if len(row) >= 5 else None
+
+            yield self.Row(team, login, name, status, row_index)
 
     @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000)
     def set_repo_status(self, index, status):
         self.service.spreadsheets().values().update(
             spreadsheetId=self.spreadsheetId,
-            range=CourseSheet.RANGE_UPDATE_FORM.format(index + 2),
+            range=CourseSheet.RANGE_UPDATE_FORM.format(index + 1),
             valueInputOption="USER_ENTERED",
             body={"values": [[status]]}).execute()
 
 
 def create_repos(sheet):
     gitlab = cgl.get_gitlab()
-    requests = sheet.get_repo_requests()
-    print(requests)
-    for i, req in enumerate(requests):
-        if len(req) < 4:
-            logger.exception("Not all information is given")
-        else:
-            team = req[1]
-            login = req[2]
-            name = '-'.join(req[3].split()).lower()
-
-            if len(req) == 4:
-                sheet.set_repo_status(i, "PROCESSING")
-
-                try:
-                    sheet.set_repo_status(i, "OK")
-                    cgl.create_project(gitlab, login, name, team)
-                except Exception:
-                    logger.exception("Can't create project")
-                    sheet.set_repo_status(i, "PROCESSING")
-
-            elif (len(req) == 5) and (req[4] == 'PROCESSING'):
-                try:
-                    cgl.delete_project(gitlab, name, team)
-                except Exception:
-                    logger.exception("Can't delete project")
-
-                sheet.set_repo_status(i, "PROCESSING")
-
-                try:
-                    sheet.set_repo_status(i, "OK")
-                    cgl.create_project(gitlab, login, name, team)
-                except Exception:
-                    logger.exception("Can't create project")
-                    sheet.set_repo_status(i, "PROCESSING")
+    for row in sheet.get_requests():
+        if row.status == "PROCESSING":
+            try:
+                cgl.delete_project(gitlab, row.name, row.team)
+            except Exception:
+                logger.exception("Can't delete project")
+        if row.status != "OK":
+            try:
+                cgl.create_project(gitlab, row.login, row.name, row.team)
+                sheet.set_repo_status(row.row_index, "OK")
+            except Exception:
+                logger.exception("Can't create project")
+                sheet.set_repo_status(row.row_index, "PROCESSING")
 
 
 def verify_users(sheet):
