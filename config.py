@@ -1,6 +1,10 @@
 GITLAB_GROUP = "test-conc"
 GITLAB_TOKEN_ENV = "8k7sushNjNLT27sCcUW-"
 
+SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+CLIENT_SECRET_FILE = 'client_secret.json'
+APPLICATION_NAME = 'Test Conc Bot'
+SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
 
 file_info = [('1-mutex/.gitignore', 'Create 1-mutex/.gitignore'),
              ('2-cond-var/.gitignore', 'Create 2-cond-var/.gitignore'),

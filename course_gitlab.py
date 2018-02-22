@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse
 import logging
-import time
 
 import gitlab
 from retrying import retry
@@ -10,20 +8,6 @@ from retrying import retry
 import config as cfg
 
 logger = logging.getLogger(__name__)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='Manage student repositories on gitlab.com')
-    subparsers = parser.add_subparsers(dest='cmd')
-    subparsers.required = True
-
-    create = subparsers.add_parser("create", help="Create and configure repository for student")
-    create.add_argument("--username", type=str, help="gitlab.com username of student", required=True)
-
-    verify = subparsers.add_parser("verify_login", help="Verify given gitlab login")
-    verify.add_argument("--username", type=str, help="Login of the student", required=True)
-
-    return parser.parse_args()
 
 
 @retry
@@ -89,7 +73,6 @@ def add_user(student_project, student, access):
         })
 
 
-@retry()
 def upload_files(student_project):
     print('[*] Trying to upload files')
     content = open('./tmp/README.md').read()
@@ -97,14 +80,12 @@ def upload_files(student_project):
                                   'branch': 'master',
                                   'content': content,
                                   'commit_message': 'Create README.md'})
-    # time.sleep(0.5)
     for file_info in cfg.file_info:
         content = open('./tmp/.gitignore').read()
         student_project.files.create({'file_path': file_info[0],
                                       'branch': 'master',
                                       'content': content,
                                       'commit_message': file_info[1]})
-        # time.sleep(0.5)
 
 
 def create_project(gl, username, name, team):
@@ -139,15 +120,3 @@ def delete_project(gl, name, team):
                                              team, name)
 
     student_project.delete()
-
-
-if __name__ == "__main__":
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-
-    git = get_gitlab()
-
-    args = parse_args()
-    if args.cmd == "create":
-        create_project(git, args.username)
-    elif args.cmd == "verify":
-        verify_login(git, args.username)

@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-
-
-import argparse
 import logging
 import os
 
@@ -12,12 +8,8 @@ from oauth2client import tools
 from oauth2client.file import Storage
 from retrying import retry
 
-import library as lib
-
-SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
-CLIENT_SECRET_FILE = 'client_secret.json'
-APPLICATION_NAME = 'Test Conc Bot'
-SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
+import config as cfg
+import course_gitlab as cgl
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +25,8 @@ def get_credentials():
     store = Storage(credential_path)
     credentials = store.get()
     if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-        flow.user_agent = APPLICATION_NAME
+        flow = client.flow_from_clientsecrets(cfg.CLIENT_SECRET_FILE, cfg.SCOPES)
+        flow.user_agent = cfg.APPLICATION_NAME
         credentials = tools.run_flow(flow, store)
         print('Storing credentials to ' + credential_path)
     return credentials
@@ -67,19 +59,8 @@ class CourseSheet:
             body={"values": [[status]]}).execute()
 
 
-def configure_argparser():
-    parser = argparse.ArgumentParser(parents=[tools.argparser])
-    subparsers = parser.add_subparsers(dest="cmd")
-    subparsers.required = True
-
-    create = subparsers.add_parser("create_repos", help="Create repositories from google spreadsheet")
-    verify = subparsers.add_parser("verify_login", help="Verify data from google spreadsheet")
-
-    return parser
-
-
 def create_repos(sheet):
-    gitlab = lib.get_gitlab()
+    gitlab = cgl.get_gitlab()
     requests = sheet.get_repo_requests()
     print(requests)
     for i, req in enumerate(requests):
@@ -95,14 +76,14 @@ def create_repos(sheet):
 
                 try:
                     sheet.set_repo_status(i, "OK")
-                    lib.create_project(gitlab, login, name, team)
+                    cgl.create_project(gitlab, login, name, team)
                 except Exception:
                     logger.exception("Can't create project")
                     sheet.set_repo_status(i, "PROCESSING")
 
             elif (len(req) == 5) and (req[4] == 'PROCESSING'):
                 try:
-                    lib.delete_project(gitlab, name, team)
+                    cgl.delete_project(gitlab, name, team)
                 except Exception:
                     logger.exception("Can't delete project")
 
@@ -110,21 +91,21 @@ def create_repos(sheet):
 
                 try:
                     sheet.set_repo_status(i, "OK")
-                    lib.create_project(gitlab, login, name, team)
+                    cgl.create_project(gitlab, login, name, team)
                 except Exception:
                     logger.exception("Can't create project")
                     sheet.set_repo_status(i, "PROCESSING")
 
 
 def verify_users(sheet):
-    gitlab = lib.get_gitlab()
+    gitlab = cgl.get_gitlab()
     requests = sheet.get_repo_requests()
     print(requests)
     for i, req in enumerate(requests):
         login = req[2]
 
         try:
-            lib.verify_login(gitlab, login)
+            cgl.verify_login(gitlab, login)
         except Exception:
             logger.exception("Invalid login")
 
@@ -141,24 +122,5 @@ def get_sheet_from_env():
                               discoveryServiceUrl=discoveryUrl)
     logger.info("API Discovery Finished")
 
-    course = CourseSheet(service, SPREADSHEET_ID)
+    course = CourseSheet(service, cfg.SPREADSHEET_ID)
     return course
-
-
-def main():
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.ERROR)
-    logger.setLevel(logging.INFO)
-
-    parser = configure_argparser()
-    flags = parser.parse_args()
-
-    course = get_sheet_from_env()
-
-    if flags.cmd == "create_repos":
-        create_repos(course)
-    elif flags.cmd == "verify_login":
-        verify_users(course)
-
-
-if __name__ == '__main__':
-    main()
