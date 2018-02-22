@@ -42,17 +42,12 @@ def create_repos(sheet):
 
 def verify_users(sheet):
     gitlab = cgl.get_gitlab()
-    requests = sheet.get_repo_requests()
-    print(requests)
-    for i, req in enumerate(requests):
-        login = req[2]
-
+    for row in sheet.get_requests():
         try:
-            cgl.verify_login(gitlab, login)
+            cgl.verify_login(gitlab, row.login)
+            sheet.set_repo_status(row.row_index, "OK")
         except Exception:
             logger.exception("Invalid login")
-
-        sheet.set_repo_status(i, "OK")
 
 
 def main():

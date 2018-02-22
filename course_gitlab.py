@@ -11,7 +11,6 @@ import config as cfg
 logger = logging.getLogger(__name__)
 
 
-@retry
 def verify_login(gl, username):
     users = gl.users.list(username=username)
     if len(users) == 0:
