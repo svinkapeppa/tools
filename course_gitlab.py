@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import logging
-import time
 
 import gitlab
 from retrying import retry
@@ -39,14 +38,15 @@ def define_course_group(gl):
 
 
 @retry
-def create_student_project(gl, course_group, team, name):
-    student_project_name = team + '-' + name
-    student_project = None
+def create_student_project(gl, course_group, student_project_name):
     logger.info("Looking for project {}".format(student_project_name))
-    for project in course_group.projects.list(search=student_project_name):
-        if project.name == student_project_name:
-            logger.info("Found existing project. id={}".format(project.id))
-            student_project = gl.projects.get(project.id)
+
+    student_project = None
+    projects = list(filter(lambda project: project.name == student_project_name,
+                           course_group.projects.list(search=student_project_name)))
+    if len(projects) > 0:
+        logger.info("Found existing project")
+        student_project = gl.projects.get(projects[0].id)
 
     if student_project is None:
         logger.info("Existing project not found, creating new.")
@@ -74,20 +74,17 @@ def add_user(student_project, student, access):
 
 
 def upload_files(student_project):
-    print('[*] Trying to upload files')
     content = open('./tmp/README.md').read()
     student_project.files.create({'file_path': 'README.md',
                                   'branch': 'master',
                                   'content': content,
                                   'commit_message': 'Create README.md'})
-    time.sleep(0.5)
     for file_info in cfg.file_info:
         content = open('./tmp/.gitignore').read()
         student_project.files.create({'file_path': file_info[0],
                                       'branch': 'master',
                                       'content': content,
                                       'commit_message': file_info[1]})
-        time.sleep(0.5)
 
 
 def create_project(gl, username, name, team):
@@ -99,8 +96,9 @@ def create_project(gl, username, name, team):
 
     course_group = define_course_group(gl)
 
+    student_project_name = team + '-' + name
     student_project = create_student_project(gl, course_group,
-                                             team, name)
+                                             student_project_name)
 
     add_user(student_project, student, gitlab.DEVELOPER_ACCESS)
 
@@ -115,10 +113,10 @@ def create_project(gl, username, name, team):
     add_user(student_project, admin, gitlab.MASTER_ACCESS)
 
 
-def delete_project(gl, name, team):
+def delete_project(gl, student_project_name):
     course_group = define_course_group(gl)
 
     student_project = create_student_project(gl, course_group,
-                                             team, name)
+                                             student_project_name)
 
     student_project.delete()

@@ -28,7 +28,8 @@ def create_repos(sheet):
     for row in sheet.get_requests():
         if row.status == "PROCESSING":
             try:
-                cgl.delete_project(gitlab, row.name, row.team)
+                student_project_name = row.team + '-' + row.name
+                cgl.delete_project(gitlab, student_project_name)
             except Exception:
                 logger.exception("Can't delete project")
         if row.status != "OK":
