@@ -29,48 +29,40 @@ def get_gitlab():
 
 @retry
 def define_course_group(gl):
-    course_group = None
-    for group in gl.groups.list():
-        if group.name == cfg.GITLAB_GROUP:
-            course_group = group
-
-    return course_group
+    groups = list(filter(lambda group: group.name == cfg.GITLAB_GROUP,
+                         gl.groups.list(search=cfg.GITLAB_GROUP)))
+    return groups[0] if len(groups) > 0 else None
 
 
 @retry
 def create_student_project(gl, course_group, student_project_name):
     logger.info("Looking for project {}".format(student_project_name))
 
-    student_project = None
     projects = list(filter(lambda project: project.name == student_project_name,
                            course_group.projects.list(search=student_project_name)))
     if len(projects) > 0:
         logger.info("Found existing project")
-        student_project = gl.projects.get(projects[0].id)
+        return gl.projects.get(projects[0].id)
 
-    if student_project is None:
-        logger.info("Existing project not found, creating new.")
-        student_project = gl.projects.create({
-            "name": student_project_name,
-            "namespace_id": course_group.id,
-            "builds_enabled": True,
-        })
-
-    return student_project
+    logger.info("Existing project not found, creating new.")
+    return gl.projects.create({
+        "name": student_project_name,
+        "namespace_id": course_group.id,
+        "builds_enabled": True,
+    })
 
 
 @retry
 def add_user(student_project, student, access):
-    for member in student_project.members.list():
-        if member.id == student.id:
-            logger.info("User already project member")
-            break
-    else:
-        logger.info("Adding user to project")
+    members = list(filter(lambda member: member.id == student.id, student_project.members.list()))
+    if len(members) == 0:
+        logger.info("Adding UserId={} to the project".format(student.id))
         student_project.members.create({
             "user_id": student.id,
             "access_level": access,
         })
+    else:
+        logger.info("UserId={} is already a project member".format(student.id))
 
 
 def upload_files(student_project):
