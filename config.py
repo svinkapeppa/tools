@@ -6,6 +6,9 @@ CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Test Conc Bot'
 SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
 
+CREDENTIALS_DIR = '.credentials'
+CREDENTIALS_FILE = 'sheets.googleapis.com-python-quickstart.json'
+
 file_info = [('1-mutex/.gitignore', 'Create 1-mutex/.gitignore'),
              ('2-cond-var/.gitignore', 'Create 2-cond-var/.gitignore'),
              ('3-fine-grained/.gitignore', 'Create 3-fine-grained/.gitignore'),
