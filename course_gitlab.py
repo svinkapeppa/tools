@@ -23,8 +23,7 @@ def verify_team(team):
 
 @retry
 def get_gitlab():
-    gl = gitlab.Gitlab("https://gitlab.com", cfg.GITLAB_TOKEN_ENV)
-    return gl
+    return gitlab.Gitlab("https://gitlab.com", cfg.GITLAB_TOKEN_ENV)
 
 
 @retry
