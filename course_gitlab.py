@@ -65,13 +65,13 @@ def add_user(student_project, student, access):
 
 
 def upload_files(student_project):
-    content = open('./tmp/README.md').read()
+    content = open(cfg.README).read()
     student_project.files.create({'file_path': 'README.md',
                                   'branch': 'master',
                                   'content': content,
                                   'commit_message': 'Create README.md'})
     for file_info in cfg.file_info:
-        content = open('./tmp/.gitignore').read()
+        content = open(cfg.GITIGNORE).read()
         student_project.files.create({'file_path': file_info[0],
                                       'branch': 'master',
                                       'content': content,
