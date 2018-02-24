@@ -55,7 +55,7 @@ class CourseSheet(object):
 
         return result['values']
 
-    def get_requests(self):
+    def get_rows(self):
         rows = self.read_sheet_rows()
 
         for row_index in range(1, len(rows)):
@@ -71,13 +71,13 @@ class CourseSheet(object):
 
             status = row[4] if len(row) >= 5 else None
 
-            yield self.Row(team, login, name, status, row_index)
+            yield self.Row(team, login, name, status, row_index + 1)
 
     @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000)
     def set_repo_status(self, index, status):
         self.service.spreadsheets().values().update(
             spreadsheetId=self.spreadsheetId,
-            range=CourseSheet.RANGE_UPDATE_FORM.format(index + 1),
+            range=CourseSheet.RANGE_UPDATE_FORM.format(index),
             valueInputOption="USER_ENTERED",
             body={"values": [[status]]}).execute()
 
