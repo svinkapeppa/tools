@@ -5,109 +5,96 @@ import logging
 import gitlab
 from retrying import retry
 
-import config as cfg
-
 logger = logging.getLogger(__name__)
 
 
-def verify_login(gl, username):
-    users = gl.users.list(username=username)
-    if len(users) == 0:
-        raise ValueError("No user with username " + username)
+class CourseGitlabException(Exception):
+    pass
 
 
-def verify_team(team):
-    if (int(team) < 691) or (int(team) > 699) or (int(team) == 698):
-        raise ValueError("Bad team " + team)
+class GroupException(CourseGitlabException):
+    pass
 
 
-@retry
-def get_gitlab():
-    return gitlab.Gitlab("https://gitlab.com", cfg.GITLAB_TOKEN_ENV)
+class UserException(CourseGitlabException):
+    pass
 
 
-@retry
-def define_course_group(gl):
-    groups = list(filter(lambda group: group.name == cfg.GITLAB_GROUP,
-                         gl.groups.list(search=cfg.GITLAB_GROUP)))
-    return groups[0] if len(groups) > 0 else None
+class CourseGitlab(object):
+    GITLAB_URL = "https://gitlab.com"
 
+    def __init__(self, config):
+        self.config = config
+        self.gitlab = gitlab.Gitlab(CourseGitlab.GITLAB_URL, config.GITLAB_TOKEN_ENV)
+        self.group = CourseGitlab._get_group(self.gitlab, config.GITLAB_GROUP)
 
-@retry
-def create_student_project(gl, course_group, student_project_name):
-    logger.info("Looking for project {}".format(student_project_name))
+    def _get_group(gitlab, group_name):
+        groups = list(filter(lambda group: group.name == group_name,
+                             gitlab.groups.list(search=group_name)))
+        if len(groups) == 0:
+            raise GroupException("Group '{}' not found".format(group_name))
+        return groups[0]
 
-    projects = list(filter(lambda project: project.name == student_project_name,
-                           course_group.projects.list(search=student_project_name)))
-    if len(projects) > 0:
-        logger.info("Found existing project")
-        return gl.projects.get(projects[0].id)
+    def get_user(self, login):
+        users = list(filter(lambda user: user.username == login,
+                            self.gitlab.users.list(username=login)))
+        if len(users) == 0:
+            raise UserException("User '{}' not found".format(login))
+        return users[0]
 
-    logger.info("Existing project not found, creating new.")
-    return gl.projects.create({
-        "name": student_project_name,
-        "namespace_id": course_group.id,
-        "builds_enabled": True,
-    })
+    @retry(stop_max_attempt_number=5)
+    def get_or_create_project(self, project_name):
+        logger.info("Looking up for a project '{}'".format(project_name))
 
+        projects = list(filter(lambda project: project.name == project_name,
+                               self.group.projects.list(search=project_name)))
+        if len(projects) > 0:
+            logger.info("Found existing project '{}'".format(project_name))
+            return self.gitlab.projects.get(projects[0].id)
 
-@retry
-def add_user(student_project, student, access):
-    members = list(filter(lambda member: member.id == student.id, student_project.members.list()))
-    if len(members) == 0:
-        logger.info("Adding UserId={} to the project".format(student.id))
-        student_project.members.create({
-            "user_id": student.id,
-            "access_level": access,
+        logger.info("Project '{}' not found, creating a new one".format(project_name))
+        return self.gitlab.projects.create({
+            "name": project_name,
+            "namespace_id": self.group.id,
+            "builds_enabled": True,
         })
-    else:
-        logger.info("UserId={} is already a project member".format(student.id))
 
+    def delete_project(self, project_name):
+        self.get_or_create_project(project_name).delete()
 
-def upload_files(student_project):
-    content = open(cfg.README).read()
-    student_project.files.create({'file_path': 'README.md',
-                                  'branch': 'master',
-                                  'content': content,
-                                  'commit_message': 'Create README.md'})
-    for file_info in cfg.file_info:
-        content = open(cfg.GITIGNORE).read()
-        student_project.files.create({'file_path': file_info[0],
-                                      'branch': 'master',
-                                      'content': content,
-                                      'commit_message': file_info[1]})
+    def add_user(project, user, access_level):
+        members = list(filter(lambda member: member.id == user.id, project.members.list()))
+        if len(members) == 0:
+            logger.info("Adding User '{}' to the project '{}'".format(user.username, project.name))
+            project.members.create({
+                "user_id": user.id,
+                "access_level": access_level,
+            })
+        else:
+            logger.info("User '{}' is already a member of project '{}'".format(user.username, project.name))
 
+    @retry(stop_max_attempt_number=5)
+    def upload_file(project, **kwargs):
+        logger.info("Uploading '{}' to the project '{}'".format(kwargs['file_path'], project.name))
+        project.files.create(kwargs)
 
-def create_project(gl, username, name, team):
-    verify_login(gl, username)
-    verify_team(team)
+    def upload_files(self, project):
+        CourseGitlab.upload_file(
+            project, file_path='README.md', branch='master',
+            content=open(self.config.README).read(), commit_message='Create README.md'
+        )
+        for file_path in self.config.file_paths:
+            CourseGitlab.upload_file(
+                project, file_path=file_path, branch='master',
+                content=open(self.config.GITIGNORE).read(),
+                commit_message="Create {}".format(file_path)
+            )
 
-    users = gl.users.list(username=username)
-    student = users[0]
-
-    course_group = define_course_group(gl)
-
-    student_project_name = team + '-' + name
-    student_project = create_student_project(gl, course_group,
-                                             student_project_name)
-
-    add_user(student_project, student, gitlab.DEVELOPER_ACCESS)
-
-    upload_files(student_project)
-
-    branch = student_project.branches.get('master')
-    branch.protect()
-
-    teacher = cfg.teachers[team]
-    verify_login(gl, teacher)
-    admin = gl.users.list(username=teacher)[0]
-    add_user(student_project, admin, gitlab.MASTER_ACCESS)
-
-
-def delete_project(gl, student_project_name):
-    course_group = define_course_group(gl)
-
-    student_project = create_student_project(gl, course_group,
-                                             student_project_name)
-
-    student_project.delete()
+    def create_project_full(self, project_name, user_login, master_login):
+        project = self.get_or_create_project(project_name)
+        user = self.get_user(user_login)
+        CourseGitlab.add_user(project, user, gitlab.DEVELOPER_ACCESS)
+        self.upload_files(project)
+        project.branches.get('master').protect()
+        master = self.get_user(master_login)
+        CourseGitlab.add_user(project,  master, gitlab.MASTER_ACCESS)
