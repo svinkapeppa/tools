@@ -42,7 +42,7 @@ class CourseGitlab(object):
             raise UserException("User '{}' not found".format(login))
         return users[0]
 
-    @retry(stop_max_attempt_number=5)
+    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
     def get_or_create_project(self, project_name):
         logger.info("Looking up for a project '{}'".format(project_name))
 
@@ -73,7 +73,7 @@ class CourseGitlab(object):
         else:
             logger.info("User '{}' is already a member of project '{}'".format(user.username, project.name))
 
-    @retry(stop_max_attempt_number=5)
+    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
     def upload_file(project, **kwargs):
         logger.info("Uploading '{}' to the project '{}'".format(kwargs['file_path'], project.name))
         project.files.create(kwargs)
@@ -98,3 +98,13 @@ class CourseGitlab(object):
         project.branches.get('master').protect()
         master = self.get_user(master_login)
         CourseGitlab.add_user(project,  master, gitlab.MASTER_ACCESS)
+
+    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
+    def create_hook(self, project_name):
+        project = self.get_or_create_project(project_name)
+        project.hooks.create({'url': self.config.HOOKURL, 'push_events': 1})
+
+    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
+    def delete_hook(self, project_name):
+        project = self.get_or_create_project(project_name)
+        project.hooks.delete(1)

@@ -4,13 +4,15 @@ GITLAB_TOKEN_ENV = "8k7sushNjNLT27sCcUW-"
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Test Conc Bot'
-SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
+SPREADSHEET_ID = "1KcYVtUcIvIVLMfBmjAo6RyCKpM3FbVmswPcx7pMq1TE"
 
 CREDENTIALS_DIR = '.credentials'
 CREDENTIALS_FILE = 'sheets.googleapis.com-python-quickstart.json'
 
 README = './tmp/README.md'
 GITIGNORE = './tmp/.gitignore'
+
+HOOKURL = 'http://tpcc.btty.su:8080/project/test'
 
 file_paths = [
     '1-mutex/.gitignore',
@@ -24,12 +26,12 @@ file_paths = [
 ]
 
 teachers = {
-    '691': 'svinkapeppa',
-    '692': 'svinkapeppa',
-    '693': 'svinkapeppa',
-    '694': 'svinkapeppa',
-    '695': 'svinkapeppa',
-    '696': 'svinkapeppa',
-    '697': 'svinkapeppa',
-    '699': 'svinkapeppa',
+    '691': 'kamiltalipov',
+    '692': 'ksamelyuk',
+    '693': 'misty-fungus',
+    '694': 'tau0',
+    '695': 'Lipovsky',
+    '696': 'akazz',
+    '697': 'tau0',
+    '699': 'velavokr',
 }

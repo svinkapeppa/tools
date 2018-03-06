@@ -19,6 +19,7 @@ def configure_argparser():
 
     create = subparsers.add_parser("create_repos", help="Create repositories from google spreadsheet")
     verify = subparsers.add_parser("verify_login", help="Verify data from google spreadsheet")
+    hooks = verify = subparsers.add_parser("create_hooks", help="Create webhooks for Jenkins")
 
     return parser
 
@@ -67,6 +68,24 @@ def verify_users(sheet):
         sheet.set_repo_status(row.row_index, "OK")
 
 
+def create_hooks(sheet):
+    course_gitlab = cgl.CourseGitlab(config)
+    for row in sheet.get_rows():
+        logger.info("Processing table row {}".format(row.row_index))
+        if not validate_team(row.team) or not validate_name(row.name):
+            continue
+        project_name = row.team + '-' + row.name
+        if row.status == "PROCESSING":
+            course_gitlab.delete_hook(project_name)
+        if row.status != "OK":
+            sheet.set_repo_status(row.row_index, "PROCESSING")
+            try:
+                course_gitlab.create_hook(project_name)
+                sheet.set_repo_status(row.row_index, "OK")
+            except cgl.UserException as exception:
+                logger.exception(str(exception))
+
+
 def main():
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
@@ -79,6 +98,8 @@ def main():
         create_repos(course)
     elif flags.cmd == "verify_login":
         verify_users(course)
+    elif flags.cmd == "create_hooks":
+        create_hooks(course)
 
 
 if __name__ == '__main__':
