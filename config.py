@@ -13,6 +13,7 @@ README = './tmp/README.md'
 GITIGNORE = './tmp/.gitignore'
 
 HOOKURL = 'http://tpcc.btty.su:8080/project/test'
+HOOKTOKEN = '9d944bdd33b48e51c604803c54944a5c'
 
 file_paths = [
     '1-mutex/.gitignore',

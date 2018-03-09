@@ -102,9 +102,15 @@ class CourseGitlab(object):
     @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
     def create_hook(self, project_name):
         project = self.get_or_create_project(project_name)
-        project.hooks.create({'url': self.config.HOOKURL, 'push_events': 1})
+        project.hooks.create({'url': self.config.HOOKURL,
+                              'push_events': 0,
+                              'merge_requests_events': 1,
+                              'enable_ssl_verification': 0,
+                              'token': self.config.HOOKTOKEN})
 
     @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
     def delete_hook(self, project_name):
         project = self.get_or_create_project(project_name)
-        project.hooks.delete(1)
+        for hook in project.hooks.list():
+            hook.delete()
+        project.hooks.list()
