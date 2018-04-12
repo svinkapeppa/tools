@@ -97,7 +97,7 @@ class CourseGitlab(object):
         self.upload_files(project)
         project.branches.get('master').protect()
         master = self.get_user(master_login)
-        CourseGitlab.add_user(project,  master, gitlab.MASTER_ACCESS)
+        CourseGitlab.add_user(project, master, gitlab.MASTER_ACCESS)
 
     @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
     def create_hook(self, project_name):
@@ -105,6 +105,7 @@ class CourseGitlab(object):
         project.hooks.create({'url': self.config.HOOKURL,
                               'push_events': 0,
                               'merge_requests_events': 1,
+                              'note_events': 1,
                               'enable_ssl_verification': 0,
                               'token': self.config.HOOKTOKEN})
 
@@ -113,4 +114,14 @@ class CourseGitlab(object):
         project = self.get_or_create_project(project_name)
         for hook in project.hooks.list():
             hook.delete()
-        project.hooks.list()
+
+    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=500)
+    def update_mr(self, project_name, task):
+        project = self.get_or_create_project(project_name)
+        mrs = project.mergerequests.list(name=task)
+        if len(mrs) > 0:
+            logger.info("Found suitable merge request")
+            mr = project.mergerequests.get(mrs[0].iid)
+            mr_note = mr.notes.create({'body': 'Retry pipeline'})
+        else:
+            logger.info("No suitable merge requests were found")

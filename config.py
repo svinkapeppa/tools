@@ -1,10 +1,10 @@
-GITLAB_GROUP = "tpcc-course-2018"
+GITLAB_GROUP = "test-conc"
 GITLAB_TOKEN_ENV = "8k7sushNjNLT27sCcUW-"
 
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Test Conc Bot'
-SPREADSHEET_ID = "1PuWau1Qo34PMSPUm9XHnOSeOlxGazSeoQgzZd3vS6rk"
+SPREADSHEET_ID = "1KcYVtUcIvIVLMfBmjAo6RyCKpM3FbVmswPcx7pMq1TE"
 
 CREDENTIALS_DIR = '.credentials'
 CREDENTIALS_FILE = 'sheets.googleapis.com-python-quickstart.json'

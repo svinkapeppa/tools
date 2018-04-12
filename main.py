@@ -19,7 +19,10 @@ def configure_argparser():
 
     create = subparsers.add_parser("create_repos", help="Create repositories from google spreadsheet")
     verify = subparsers.add_parser("verify_login", help="Verify data from google spreadsheet")
-    hooks = verify = subparsers.add_parser("create_hooks", help="Create webhooks for Jenkins")
+    create_hooks = subparsers.add_parser("create_hooks", help="Create webhooks for Jenkins")
+    delete_hooks = subparsers.add_parser("delete_hooks", help="Delete webhooks for Jenkins")
+    mr = subparsers.add_parser("update_mr", help="Retry pipeline for every open merge request")
+    mr.add_argument("task", help="Name of the task")
 
     return parser
 
@@ -27,7 +30,7 @@ def configure_argparser():
 def validate_team(team):
     is_valid = False
     try:
-        is_valid = 691 <= int(team) and int(team) <= 699 and int(team) != 698
+        is_valid = 691 <= int(team) <= 699 and int(team) != 698
     except Exception:
         pass
     if not is_valid:
@@ -86,6 +89,40 @@ def create_hooks(sheet):
                 logger.exception(str(exception))
 
 
+def delete_hooks(sheet):
+    course_gitlab = cgl.CourseGitlab(config)
+    for row in sheet.get_rows():
+        logger.info("Processing table row {}".format(row.row_index))
+        if not validate_team(row.team) or not validate_name(row.name):
+            continue
+        project_name = row.team + '-' + row.name
+        if row.status == "PROCESSING":
+            course_gitlab.delete_hook(project_name)
+        if row.status != "OK":
+            sheet.set_repo_status(row.row_index, "PROCESSING")
+            try:
+                course_gitlab.delete_hook(project_name)
+                sheet.set_repo_status(row.row_index, "OK")
+            except cgl.UserException as exception:
+                logger.exception(str(exception))
+
+
+def update_mr(sheet, task):
+    course_gitlab = cgl.CourseGitlab(config)
+    for row in sheet.get_rows():
+        logger.info("Processing table row {}".format(row.row_index))
+        if not validate_team(row.team) or not validate_name(row.name):
+            continue
+        project_name = row.team + '-' + row.name
+        if row.status != "OK":
+            sheet.set_repo_status(row.row_index, "PROCESSING")
+            try:
+                course_gitlab.update_mr(project_name, task)
+                sheet.set_repo_status(row.row_index, "OK")
+            except cgl.UserException as exception:
+                logger.exception(str(exception))
+
+
 def main():
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
 
@@ -98,8 +135,12 @@ def main():
         create_repos(course)
     elif flags.cmd == "verify_login":
         verify_users(course)
+    elif flags.cmd == "delete_hooks":
+        delete_hooks(course)
     elif flags.cmd == "create_hooks":
         create_hooks(course)
+    elif flags.cmd == "update_mr":
+        update_mr(course, flags.task)
 
 
 if __name__ == '__main__':
