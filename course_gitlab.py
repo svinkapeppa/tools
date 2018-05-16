@@ -122,6 +122,9 @@ class CourseGitlab(object):
         if len(mrs) > 0:
             logger.info("Found suitable merge request")
             mr = project.mergerequests.get(mrs[0].iid)
-            mr_note = mr.notes.create({'body': 'Retry pipeline'})
+            if mr.state == 'opened':
+                mr_note = mr.notes.create({'body': 'Retry pipeline'})
+            else:
+                print(mr.state)
         else:
             logger.info("No suitable merge requests were found")
