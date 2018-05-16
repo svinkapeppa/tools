@@ -99,7 +99,7 @@ def delete_hooks(sheet):
         logger.info("Processing table row {}".format(row.row_index))
         if not validate_team(row.team) or not validate_name(row.name):
             continue
-        project_tame = row.team + '-' + row.name
+        project_name = row.team + '-' + row.name
         if row.status == "PROCESSING":
             course_gitlab.delete_hook(project_name)
         if row.status != "OK":
@@ -115,7 +115,6 @@ def show_merge_requests(group):
     course_gitlab = cgl.CourseGitlab(config)
     for project in course_gitlab.group.projects.list(search=group, with_merge_requests_enabled=True):
         project_obj = course_gitlab.get_or_create_project(project.name)
-        # print("project: '{}'".format(project_obj
         for merge_request in project_obj.mergerequests.list(state='all', per_page=10000):
             if merge_request.state == "closed":
                 continue
