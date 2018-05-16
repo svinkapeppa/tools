@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import logging
+import re
 
 from oauth2client import tools
 
@@ -21,6 +23,8 @@ def configure_argparser():
     verify = subparsers.add_parser("verify_login", help="Verify data from google spreadsheet")
     create_hooks = subparsers.add_parser("create_hooks", help="Create webhooks for Jenkins")
     delete_hooks = subparsers.add_parser("delete_hooks", help="Delete webhooks for Jenkins")
+    show_merge_requests = subparsers.add_parser("show_merge_requests", help="Show all merge requests for a certain group")
+    show_merge_requests.add_argument("--group", type=int)
     mr = subparsers.add_parser("update_mr", help="Retry pipeline for every open merge request")
     mr.add_argument("task", help="Name of the task")
 
@@ -95,7 +99,7 @@ def delete_hooks(sheet):
         logger.info("Processing table row {}".format(row.row_index))
         if not validate_team(row.team) or not validate_name(row.name):
             continue
-        project_name = row.team + '-' + row.name
+        project_tame = row.team + '-' + row.name
         if row.status == "PROCESSING":
             course_gitlab.delete_hook(project_name)
         if row.status != "OK":
@@ -105,6 +109,29 @@ def delete_hooks(sheet):
                 sheet.set_repo_status(row.row_index, "OK")
             except cgl.UserException as exception:
                 logger.exception(str(exception))
+
+
+def show_merge_requests(group):
+    course_gitlab = cgl.CourseGitlab(config)
+    for project in course_gitlab.group.projects.list(search=group, with_merge_requests_enabled=True):
+        project_obj = course_gitlab.get_or_create_project(project.name)
+        # print("project: '{}'".format(project_obj
+        for merge_request in project_obj.mergerequests.list(state='all', per_page=10000):
+            if merge_request.state == "closed":
+                continue
+            task_deadline = None
+            for regexp, deadline in config.deadlines:
+                if re.match(regexp, merge_request.source_branch):
+                    task_deadline = deadline
+                    break
+            if task_deadline is None:
+                print("wrong merge request name '{}'".format(merge_request.source_branch))
+                continue
+            date_obj = datetime.datetime.strptime(merge_request.created_at, "%Y-%m-%dT%H:%M:%S.%fZ") \
+                + datetime.timedelta(hours=3)
+            date = date_obj.strftime("%Y-%m-%d %H:%M:%S")
+            print("task: '{}', created_at: '{}', state: '{}', before_deadline: '{}'".format(merge_request.source_branch,
+                  date, merge_request.state, date <= task_deadline))
 
 
 def update_mr(sheet, task):
@@ -141,6 +168,8 @@ def main():
         create_hooks(course)
     elif flags.cmd == "update_mr":
         update_mr(course, flags.task)
+    elif flags.cmd == "show_merge_requests":
+        show_merge_requests(flags.group)
 
 
 if __name__ == '__main__':
